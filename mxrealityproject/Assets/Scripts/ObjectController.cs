@@ -5,13 +5,28 @@ using UnityEngine;
 public class ObjectController : MonoBehaviour
 {
     public ObjectData data;
+    public bool localSwitch;
+    public int localState;
+
+    public bool hovered;
+
+    private void Awake()
+    {
+        data.interact = false;
+    }
 
     private void Update()
     {
+        #region legacy
         if (data.interact)
         {
-            ObjectCheck(data.objectType); //Using Scriptable Object to obtain object data
+             ObjectCheck(data.objectType); //Using Scriptable Object to obtain object data
         }
+        
+        #endregion
+
+        localSwitch = data.interact;
+        localState = data.state;
     }
 
     //Redirect functionality based on current object
@@ -20,55 +35,108 @@ public class ObjectController : MonoBehaviour
         switch (_type)
         {
             case ObjectType.SPHERE:
-                ChangeColour(data.interact);
+                ChangeColour();
                 break;
 
             case ObjectType.CUBE:
-                Rotate(data.interact);
+                StartCoroutine(Rotate());
                 break;
 
             case ObjectType.CAPSULE:
-                ScaleObject(data.minScale, data.maxScale);
+                StartCoroutine(ScaleObject());
                 break;
         }
     } 
+ 
 
-    public void Rotate(bool _rotate)
+    public IEnumerator Rotate()
     {
-        if (_rotate)
+        if (data.interact)
         {
-            //Rotate this object
-            transform.Rotate(90f, 0f, 0f);
+            //Rotate 
+            transform.Rotate(new Vector3(0, 100f, 0) * Time.deltaTime);
+            data.state = 1;
         }
         else
+        {
+            data.state = 0;
+            yield return null;
+        }
+
+        // Spherical Lerping 
+        #region legacy
+        /*
+        float _rotationValue = 0;
+        _rotationValue += Time.deltaTime;
+        Quaternion _desiredRotation = Quaternion.Euler(transform.eulerAngles.x, _rotationValue, transform.eulerAngles.z);
+        transform.rotation = Quaternion.Slerp(transform.rotation, _desiredRotation, 0.03f);
+        */
+        #endregion
+
+        #region legacy 
+        /*else
         {
             //Stop rotating
-            
+            Quaternion _resetRotation = Quaternion.Euler(transform.eulerAngles.x, 0, transform.eulerAngles.z);
+            transform.rotation = Quaternion.Lerp(transform.rotation, _resetRotation, .1f);
+        }
+        */
+        //localSwitch = !localSwitch;
+        #endregion
+    }
+
+    public void ChangeColour()
+    {
+        if (data.interact)
+        {
+            if (data.state == 1)
+            {
+                //switch the object colour
+                data.material.color = new Color32(0, 0, 255, 255);
+                data.state = 0; ;
+                data.interact = false;
+                return;
+            }
+            else
+            {
+                //switch back to original colour
+                data.material.color = new Color32(0, 255, 0, 255);
+                data.state = 1;
+                data.interact = false;
+                return;
+            }       
         }
     }
 
-    public void ChangeColour(bool _changeColour)
+    public IEnumerator ScaleObject()
     {
-        if (_changeColour)
+        if (data.interact)
         {
-            //switch the object colour
+            if (data.state == 0)
+            {
+                //scale upto maxScale (original scale * 2) 
+                transform.localScale += new Vector3(1, 1, 1) * Time.deltaTime;
 
+                if (transform.localScale.x >= data.maxScale)
+                {
+                    data.state = 1;
+                    yield return data.interact = false;
+                }
+            }
+            else
+            {
+                transform.localScale -= new Vector3(1, 1, 1) * Time.deltaTime;
+
+                if (transform.localScale.x <= data.minScale)
+                {
+                    data.state = 0;
+                    yield return data.interact = false;
+                }
+            }
         }
         else
         {
-            //switch back to original colour
-        }
-    }
-
-    public void ScaleObject(float _minScale, float _maxScale)
-    {
-        if (transform.localScale.x <= _maxScale)
-        {
-            //scale upto maxScale (original scale * 2) 
-        }
-        else
-        {
-            //scale down to minScale (original scale == 1) 
+            yield return null;
         }
     }
 }

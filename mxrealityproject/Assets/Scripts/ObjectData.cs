@@ -17,7 +17,7 @@ public class ObjectData : ScriptableObject
     public Vector3 transform;
     public Material material;
 
-    public float xRotation;
+    public int state;
     public bool interact;
 
     public float minScale = 1f;
